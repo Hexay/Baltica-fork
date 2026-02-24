@@ -8,6 +8,8 @@
       "packages/raknet/node_modules": true,
       "apps/raknet/node_modules": true,
       "packages/utils/dist": true,
-      "packages/utils/node_modules": true
+      "packages/utils/node_modules": true,
+      "dist": true,
+      "node_modules": true
    }
 }

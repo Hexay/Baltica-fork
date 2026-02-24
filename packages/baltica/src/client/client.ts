@@ -120,13 +120,10 @@ export class Client extends Emitter<ClientEvents> {
          (p) => new RequestedResourcePack(p.uuid, p.version),
       );
       response.response = ResourcePackResponse.HaveAllPacks;
-      this.send(response.serialize());
 
-      if (packet instanceof ResourcePacksInfoPacket) {
-         const cacheStatus = new ClientCacheStatusPacket();
-         cacheStatus.enabled = false;
-         this.send(cacheStatus.serialize());
-      }
+      const cacheStatus = new ClientCacheStatusPacket();
+      cacheStatus.enabled = false;
+      this.send([response.serialize(), cacheStatus.serialize()]);
    }
 
    private onResourcePackStack(packet: ResourcePackStackPacket): void {
@@ -156,8 +153,10 @@ export class Client extends Emitter<ClientEvents> {
       loadingScreen.type = ServerboundLoadingScreenType.EndLoadingScreen;
       loadingScreen.hasScreenId = false;
 
-      this.send(loadingScreen.serialize());
-      this.send(init.serialize());
+      this.send([
+         loadingScreen.serialize(),
+         init.serialize(),
+      ])
       this.emit("SetLocalPlayerAsInitializedPacket", init);
    }
 
