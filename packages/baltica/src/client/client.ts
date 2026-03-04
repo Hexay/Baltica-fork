@@ -26,6 +26,7 @@ export class Client extends Emitter<ClientEvents> {
    public loginData!: LoginData;
    public stopPastLogin: boolean = false;
    public startGameData!: StartGamePacket;
+   private isDisconnected: boolean = false;
 
    constructor(options: Partial<ClientOptions>) {
       super();
@@ -187,6 +188,8 @@ export class Client extends Emitter<ClientEvents> {
    }
 
    public disconnect(reason = "client disconnect"): void {
+      if (this.isDisconnected) return;
+      this.isDisconnected = true;
       this.emit("disconnect", reason);
       setTimeout(() => {
          if (this.raknet && typeof this.raknet.disconnect === "function") {
@@ -292,6 +295,7 @@ export class Client extends Emitter<ClientEvents> {
       priority: Priority = Priority.Medium,
       compressionMethod?: CompressionMethod,
    ) {
+      if (this.isDisconnected) return;
       try {
          const compressed = this.packetCompressor.compress(packet, compressionMethod);
          this.raknet.sendReliable(compressed, priority);

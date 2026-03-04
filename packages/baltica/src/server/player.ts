@@ -25,6 +25,7 @@ export class Player extends Emitter<PlayerEvents> {
    public connection: Connection;
    public username: string = "";
    public xuid: string = "";
+   private isDisconnected: boolean = false;
 
    private privateKey: KeyObject;
    private publicKeyDER: Buffer;
@@ -191,6 +192,7 @@ export class Player extends Emitter<PlayerEvents> {
       priority: Priority = Priority.High,
       compressionMethod?: CompressionMethod,
    ): void {
+      if (this.isDisconnected) return;
       try {
          const compressed = this.packetCompressor.compress(packet, compressionMethod);
          this.connection.send(compressed, priority);
@@ -213,6 +215,8 @@ export class Player extends Emitter<PlayerEvents> {
 
 
    public disconnect(reason = "disconnected"): void {
+      if (this.isDisconnected) return;
+      this.isDisconnected = true;
       Logger.info(`Disconnecting ${this.username || "player"}: ${reason}`);
       this.connection.disconnect();
       this.emit("disconnect");
