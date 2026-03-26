@@ -9,7 +9,8 @@
     "esModuleInterop": true,
     "skipLibCheck": true,
     "resolveJsonModule": true,
-    "composite": true
+    "composite": true,
+    "types": ["node"]
   },
   "include": ["src", "src/**/*.json"]
 }
