@@ -97,6 +97,14 @@ const bridge = new Bridge({
     address: "play.example.net",
     port: 19132,
   },
+  email: "user@example.com",
+  password: "super-secret-password",
+  proxy: {
+    host: "proxy.example.com",
+    port: 1080,
+    username: "user",
+    password: "pass",
+  },
 });
 
 bridge.on("connect", con => {

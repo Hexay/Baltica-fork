@@ -1,3 +1,4 @@
+import type { Socks5Options } from "@baltica/raknet";
 import { defaultServerOptions, type ServerOptions } from "../../server";
 
 export type BridgeOptions = ServerOptions & {
@@ -6,6 +7,9 @@ export type BridgeOptions = ServerOptions & {
       port: number;
    };
    offline: boolean;
+   proxy?: Socks5Options;
+   email?: string;
+   password?: string;
 };
 
 export const defaultBridgeOptions: BridgeOptions = {

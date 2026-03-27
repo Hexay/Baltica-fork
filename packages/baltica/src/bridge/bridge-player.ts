@@ -32,6 +32,9 @@ export class BridgePlayer extends Emitter<BridgePlayerEvents> {
          address: this.bridge.options.destination.address,
          port: this.bridge.options.destination.port,
          offline: this.bridge.options.offline,
+         proxy: this.bridge.options.proxy,
+         email: this.bridge.options.email,
+         password: this.bridge.options.password,
       });
 
       this.client.stopPastLogin = true;

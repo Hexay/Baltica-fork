@@ -174,44 +174,7 @@ export async function authenticateWithPassword(
    if (!location || !location.includes("access_token")) {
       const body = lastRedirectBody || await loginResponse.text().catch(() => "");
       const lastUrl = location ?? "";
-
-      // Identity confirmation / account protection (captcha, email code, phone, etc.)
-      if (
-         lastUrl.includes("identity/confirm") ||
-         body.includes("identity/confirm") ||
-         body.includes("Help us protect your account") ||
-         body.includes("account.live.com/identity")
-      ) {
-         throw new Error(
-            "Microsoft requires identity verification for this account. " +
-            "Complete the verification at https://login.live.com in a browser, or use the device code flow instead.",
-         );
-      }
-
-      // Two-factor / two-step verification
-      if (
-         lastUrl.includes("LiveTwoStepVerification") ||
-         body.includes("two-step verification") ||
-         body.includes("2FA")
-      ) {
-         throw new Error(
-            "Two-factor authentication is enabled on this account. Use the device code flow instead.",
-         );
-      }
-
-      // Actual bad credentials
-      if (
-         body.includes("Sign in to") ||
-         body.includes("sign in") ||
-         body.includes("incorrect") ||
-         body.includes("That Microsoft account doesn")
-      ) {
-         throw new Error("Invalid email or password");
-      }
-
-      throw new Error(
-         "Email/password authentication failed: could not obtain access token from redirect",
-      );
+      throw inferPasswordAuthFailure(lastUrl, body);
    }
 
    const fragment = location.split("#")[1];
@@ -229,6 +192,102 @@ export async function authenticateWithPassword(
       refreshToken: refreshToken ? decodeURIComponent(refreshToken) : "",
       expiresAt: Date.now() + (Number(expiresIn) || 86400) * 1000,
    };
+}
+
+export function inferPasswordAuthFailure(lastUrl: string, body: string): Error {
+   // Identity confirmation / account protection (captcha, email code, phone, etc.)
+   if (
+      lastUrl.includes("identity/confirm") ||
+      body.includes("identity/confirm") ||
+      body.includes("Help us protect your account") ||
+      body.includes("account.live.com/identity")
+   ) {
+      return new Error(
+         "Microsoft requires identity verification for this account. " +
+         "Complete the verification at https://login.live.com in a browser, or use the device code flow instead.",
+      );
+   }
+
+   // Two-factor / two-step verification
+   if (
+      lastUrl.includes("LiveTwoStepVerification") ||
+      body.includes("two-step verification") ||
+      body.includes("2FA")
+   ) {
+      return new Error(
+         "Two-factor authentication is enabled on this account. Use the device code flow instead.",
+      );
+   }
+
+   if (
+      body.includes("Stay signed in?") ||
+      body.includes("Keep me signed in") ||
+      body.includes("kmsi") ||
+      lastUrl.includes("kmsi")
+   ) {
+      return new Error(
+         "Microsoft stopped on a 'Stay signed in?' confirmation step. " +
+         diagnosticContext(lastUrl, body),
+      );
+   }
+
+   if (
+      body.includes("Permissions requested") ||
+      body.includes("Review permissions") ||
+      body.includes("Let this app access your info") ||
+      lastUrl.includes("consent")
+   ) {
+      return new Error(
+         "Microsoft stopped on an app consent/permissions step. " +
+         diagnosticContext(lastUrl, body),
+      );
+   }
+
+   // Explicit bad-credential signals only. Generic sign-in pages are ambiguous.
+   if (
+      body.includes("password is incorrect") ||
+      body.includes("Your account or password is incorrect") ||
+      body.includes("That Microsoft account doesn") ||
+      body.includes("Enter the password for") ||
+      body.includes("Try again, or use a different password")
+   ) {
+      return new Error("Invalid email or password");
+   }
+
+   return new Error(
+      "Email/password authentication failed: Microsoft returned an unrecognized login step. " +
+      "This often means the account needs an interactive sign-in, protection check, or a changed Microsoft login page. " +
+      diagnosticContext(lastUrl, body),
+   );
+}
+
+function diagnosticContext(lastUrl: string, body: string): string {
+   const summary = summarizeHtml(body);
+   return `Final URL: ${safeUrl(lastUrl) || "<none>"}. Page snippet: ${summary}`;
+}
+
+function safeUrl(url: string): string {
+   if (!url) return "";
+
+   try {
+      const parsed = new URL(url);
+      return `${parsed.origin}${parsed.pathname}`;
+   } catch {
+      const trimmed = url.split("?")[0]?.split("#")[0] ?? "";
+      return trimmed.slice(0, 200);
+   }
+}
+
+function summarizeHtml(body: string): string {
+   const collapsed = body
+      .replace(/<script[\s\S]*?<\/script>/gi, " ")
+      .replace(/<style[\s\S]*?<\/style>/gi, " ")
+      .replace(/<[^>]+>/g, " ")
+      .replace(/\s+/g, " ")
+      .trim();
+
+   if (!collapsed) return "<empty>";
+   return collapsed.slice(0, 220);
 }
 
 function extractCookies(response: Response): string {
